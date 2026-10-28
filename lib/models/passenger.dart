@@ -1,124 +1,70 @@
-enum CohesionLevel {
-  sameBay,
-  sameCoach,
-  otherCoach,
-}
-
-enum SeatOccupancyStatus {
-  yourGroup,
-  openToSwap,
-  occupied,
-}
-
 class Passenger {
   final String id;
+  final String tripId;
+  final String? groupId;
   final String name;
-  final bool isCurrentUser;
   final String coach;
-  final int seatNumber;
-  final String berthType;
-  final String? bay;
-  final String? pairedWith;
-  final CohesionLevel cohesionLevel;
-  final String? statusNote;
-  final String avatarLetter;
+  final int seatNo;
+  final bool willingToSwap;
 
-  Passenger({
+  const Passenger({
     required this.id,
+    required this.tripId,
     required this.name,
-    this.isCurrentUser = false,
     required this.coach,
-    required this.seatNumber,
-    required this.berthType,
-    this.bay,
-    this.pairedWith,
-    required this.cohesionLevel,
-    this.statusNote,
-    required this.avatarLetter,
+    required this.seatNo,
+    required this.willingToSwap,
+    this.groupId,
   });
 
-  String get seatTag => '$coach / $seatNumber';
+  factory Passenger.fromMap(Map<String, dynamic> m) => Passenger(
+        id: m['id'] as String,
+        tripId: m['trip_id'] as String,
+        groupId: m['group_id'] as String?,
+        name: m['name'] as String,
+        coach: m['coach'] as String,
+        seatNo: (m['seat_no'] as num).toInt(),
+        willingToSwap: (m['willing_to_swap'] as bool?) ?? true,
+      );
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'trip_id': tripId,
+        'group_id': groupId,
+        'name': name,
+        'coach': coach,
+        'seat_no': seatNo,
+        'willing_to_swap': willingToSwap,
+      };
 
   Passenger copyWith({
+    String? id,
+    String? tripId,
+    String? groupId,
+    String? name,
     String? coach,
-    int? seatNumber,
-    String? berthType,
-    String? bay,
-    String? pairedWith,
-    CohesionLevel? cohesionLevel,
-    String? statusNote,
+    int? seatNo,
+    bool? willingToSwap,
   }) {
     return Passenger(
-      id: id,
-      name: name,
-      isCurrentUser: isCurrentUser,
+      id: id ?? this.id,
+      tripId: tripId ?? this.tripId,
+      groupId: groupId ?? this.groupId,
+      name: name ?? this.name,
       coach: coach ?? this.coach,
-      seatNumber: seatNumber ?? this.seatNumber,
-      berthType: berthType ?? this.berthType,
-      bay: bay ?? this.bay,
-      pairedWith: pairedWith ?? this.pairedWith,
-      cohesionLevel: cohesionLevel ?? this.cohesionLevel,
-      statusNote: statusNote ?? this.statusNote,
-      avatarLetter: avatarLetter,
+      seatNo: seatNo ?? this.seatNo,
+      willingToSwap: willingToSwap ?? this.willingToSwap,
     );
   }
-}
 
-class CoachSeat {
-  final int seatNumber;
-  final String berthCode; // LB, MB, UB, SL, SU
-  final String berthName;
-  final String? passengerLabel;
-  final SeatOccupancyStatus status;
-  final String? swapDetails;
-  final bool isCurrentUser;
-  final bool isTargetForOptimization;
+  String get seatKey => '$coach/$seatNo';
+  String get seatLabel => '$coach / $seatNo';
 
-  CoachSeat({
-    required this.seatNumber,
-    required this.berthCode,
-    required this.berthName,
-    this.passengerLabel,
-    required this.status,
-    this.swapDetails,
-    this.isCurrentUser = false,
-    this.isTargetForOptimization = false,
-  });
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Passenger && runtimeType == other.runtimeType && id == other.id;
 
-  CoachSeat copyWith({
-    SeatOccupancyStatus? status,
-    String? passengerLabel,
-    bool? isTargetForOptimization,
-  }) {
-    return CoachSeat(
-      seatNumber: seatNumber,
-      berthCode: berthCode,
-      berthName: berthName,
-      passengerLabel: passengerLabel ?? this.passengerLabel,
-      status: status ?? this.status,
-      swapDetails: swapDetails,
-      isCurrentUser: isCurrentUser,
-      isTargetForOptimization: isTargetForOptimization ?? this.isTargetForOptimization,
-    );
-  }
-}
-
-class SwapRequestItem {
-  final String id;
-  final String passengerName;
-  final String currentSeat;
-  final String targetSeat;
-  final String reason;
-  final String status; // 'pending', 'accepted', 'completed'
-  final String timeAgo;
-
-  SwapRequestItem({
-    required this.id,
-    required this.passengerName,
-    required this.currentSeat,
-    required this.targetSeat,
-    required this.reason,
-    required this.status,
-    required this.timeAgo,
-  });
+  @override
+  int get hashCode => id.hashCode;
 }
