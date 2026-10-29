@@ -4,6 +4,9 @@ import '../data/passenger_repo.dart';
 import '../data/request_repo.dart';
 import '../data/session_store.dart';
 import '../data/trip_repo.dart';
+import '../features/walkthrough/walkthrough_controller.dart';
+import '../features/walkthrough/walkthrough_keys.dart';
+import '../features/walkthrough/walkthrough_speech.dart';
 import '../logic/matcher.dart';
 import '../logic/optimizer.dart';
 import '../logic/score.dart';
@@ -14,7 +17,26 @@ import '../models/trip.dart';
 
 // Repository Providers
 final sessionStoreProvider = Provider<SessionStore>((ref) {
-  throw UnimplementedError('sessionStoreProvider must be overridden in ProviderScope');
+  throw UnimplementedError(
+    'sessionStoreProvider must be overridden in ProviderScope',
+  );
+});
+
+final walkthroughKeysProvider = Provider<WalkthroughKeys>((ref) {
+  return WalkthroughKeys();
+});
+
+final walkthroughControllerProvider =
+    StateNotifierProvider<WalkthroughController, WalkthroughState>((ref) {
+      return WalkthroughController(ref.watch(sessionStoreProvider));
+    });
+
+final walkthroughSpeechProvider = ChangeNotifierProvider<WalkthroughSpeech>((
+  ref,
+) {
+  final speech = WalkthroughSpeech(ref.watch(sessionStoreProvider));
+  ref.onDispose(speech.dispose);
+  return speech;
 });
 
 final tripRepoProvider = Provider<TripRepo>((ref) => TripRepo());
@@ -102,8 +124,9 @@ class SwapPrefs {
     bool? onlyOpen,
   }) {
     return SwapPrefs(
-      preferredBerth:
-          preferredBerth != null ? preferredBerth() : this.preferredBerth,
+      preferredBerth: preferredBerth != null
+          ? preferredBerth()
+          : this.preferredBerth,
       sameCoachOnly: sameCoachOnly ?? this.sameCoachOnly,
       nearGroup: nearGroup ?? this.nearGroup,
       onlyOpen: onlyOpen ?? this.onlyOpen,
@@ -140,12 +163,16 @@ final planProvider = Provider<Plan?>((ref) {
   if (group.length < 2) return null;
   final all = ref.watch(tripPassengersProvider).valueOrNull ?? [];
   final excluded = ref.watch(excludedIdsProvider);
-  final availablePassengers =
-      all.where((p) => !excluded.contains(p.id)).toList();
+  final availablePassengers = all
+      .where((p) => !excluded.contains(p.id))
+      .toList();
   return bestPlan(group: group, all: availablePassengers);
 });
 
 final activePlanIdProvider = StateProvider<String?>((ref) => null);
+
+/// Asks the Requests screen to open a tab: 0 incoming, 3 rejected.
+final requestsTabIndexProvider = StateProvider<int?>((ref) => null);
 
 final activePlanRequestsProvider = StreamProvider<List<SwapRequest>>((ref) {
   final planId = ref.watch(activePlanIdProvider);

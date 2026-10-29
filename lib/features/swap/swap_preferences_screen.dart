@@ -174,11 +174,12 @@ class _SwapPreferencesScreenState
             ),
             const SizedBox(height: 12),
 
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.white,
+            Material(
+              color: AppColors.white,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border),
+                side: const BorderSide(color: AppColors.border),
               ),
               child: Column(
                 children: [

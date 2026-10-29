@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/dark_header_scaffold.dart';
+import '../../core/widgets/station_backdrop.dart';
 import '../../core/widgets/loading_skeleton.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/seat_chip.dart';
 import '../../logic/seat_utils.dart';
 import '../../providers/providers.dart';
+import '../walkthrough/walkthrough_keys.dart';
+import '../walkthrough/walkthrough_target.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -38,7 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 16),
               PrimaryButton(
                 label: 'Select Passenger',
-                onPressed: () => context.go('/select-passenger'),
+                onPressed: () => context.push('/select-passenger?from=/home'),
                 showArrow: false,
               ),
             ],
@@ -48,6 +51,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     return DarkHeaderScaffold(
+      headerImageAsset: AppImages.trainHeader,
+      headerImageAlignment: Alignment.centerRight,
+      fadeHeaderImageRight: true,
       header: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
@@ -61,10 +67,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome back,',
+                      'Welcome back!',
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.white.withOpacity(0.7),
+                        color: AppColors.white.withOpacity(0.75),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -74,6 +80,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                         color: AppColors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Bring your group together',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.white.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -103,7 +118,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Train Banner Chip
             tripAsync.when(
               data: (trip) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.inkSoft,
                   borderRadius: BorderRadius.circular(12),
@@ -156,327 +174,342 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Trip Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'YOUR RESERVATION',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textSecondary,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.push('/trip'),
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Edit',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.mintPressed,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // From & To Station Row
-                tripAsync.when(
-                  data: (trip) => Row(
+          WalkthroughTarget(
+            id: WalkthroughTargetId.homeTicket,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'From',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              trip.fromStation,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            if (trip.departTime != null)
-                              Text(
-                                trip.departTime!,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                          ],
+                      const Text(
+                        'YOUR RESERVATION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.8,
                         ),
                       ),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: AppColors.fieldGrey,
-                          shape: BoxShape.circle,
+                      TextButton(
+                        onPressed: () => context.push('/trip'),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 18,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              'To',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              trip.toStation,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                            if (trip.arriveTime != null)
-                              Text(
-                                trip.arriveTime!,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                          ],
+                        child: const Text(
+                          'Edit',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.mintPressed,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  loading: () => const LoadingSkeleton(height: 48),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
+                  const SizedBox(height: 16),
 
-                const Divider(height: 28, color: AppColors.border),
-
-                // Seat & Travellers
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // From & To Station Row
+                  tripAsync.when(
+                    data: (trip) => Row(
                       children: [
-                        const Text(
-                          'Your Seat',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            SeatChip(
-                              coach: currentPassenger.coach,
-                              seatNo: currentPassenger.seatNo,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              berthOf(currentPassenger.seatNo),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.ink,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'From',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text(
-                          'Travellers',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
+                              const SizedBox(height: 2),
+                              Text(
+                                trip.fromStation,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              if (trip.departTime != null)
+                                Text(
+                                  trip.departTime!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          myGroup.isNotEmpty
-                              ? '${myGroup.length} in group'
-                              : '1 solo',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: AppColors.fieldGrey,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
                             color: AppColors.ink,
                           ),
                         ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text(
+                                'To',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                trip.toStation,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              if (trip.arriveTime != null)
+                                Text(
+                                  trip.arriveTime!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ],
+                    loading: () => const LoadingSkeleton(height: 48),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+
+                  const Divider(height: 28, color: AppColors.border),
+
+                  // Seat & Travellers
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Your Seat',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              SeatChip(
+                                coach: currentPassenger.coach,
+                                seatNo: currentPassenger.seatNo,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                berthOf(currentPassenger.seatNo),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'Travellers',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            myGroup.isNotEmpty
+                                ? '${myGroup.length} in group'
+                                : '1 solo',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
 
           // Mode Selector Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                AppChip(
-                  label: 'Group Seating',
-                  icon: Icons.groups_rounded,
-                  isSelected: _selectedModeIndex == 0,
-                  onTap: () => setState(() => _selectedModeIndex = 0),
-                ),
-                const SizedBox(width: 8),
-                AppChip(
-                  label: 'Single Swap',
-                  icon: Icons.swap_horiz_rounded,
-                  isSelected: _selectedModeIndex == 1,
-                  onTap: () {
-                    setState(() => _selectedModeIndex = 1);
-                    context.push('/swap/preferences');
-                  },
-                ),
-                const SizedBox(width: 8),
-                AppChip(
-                  label: 'Coach Map',
-                  icon: Icons.grid_view_rounded,
-                  isSelected: _selectedModeIndex == 2,
-                  onTap: () {
-                    setState(() => _selectedModeIndex = 2);
-                    context.push('/seat-map');
-                  },
-                ),
-              ],
+          WalkthroughTarget(
+            id: WalkthroughTargetId.homeModes,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  AppChip(
+                    label: 'Group Seating',
+                    icon: Icons.groups_rounded,
+                    isSelected: _selectedModeIndex == 0,
+                    onTap: () => setState(() => _selectedModeIndex = 0),
+                  ),
+                  const SizedBox(width: 8),
+                  AppChip(
+                    label: 'Single Swap',
+                    icon: Icons.swap_horiz_rounded,
+                    isSelected: _selectedModeIndex == 1,
+                    onTap: () {
+                      setState(() => _selectedModeIndex = 1);
+                      context.push('/swap/preferences');
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  AppChip(
+                    label: 'Coach Map',
+                    icon: Icons.grid_view_rounded,
+                    isSelected: _selectedModeIndex == 2,
+                    onTap: () {
+                      setState(() => _selectedModeIndex = 2);
+                      context.push('/seat-map');
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
 
           // "Seat swap open" Toggle Card
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: currentPassenger.willingToSwap
-                        ? AppColors.mint.withOpacity(0.2)
-                        : AppColors.fieldGrey,
-                    shape: BoxShape.circle,
+          WalkthroughTarget(
+            id: WalkthroughTargetId.homeSwap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: currentPassenger.willingToSwap
+                          ? AppColors.mint.withOpacity(0.2)
+                          : AppColors.fieldGrey,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.swap_calls_rounded,
+                      color: currentPassenger.willingToSwap
+                          ? AppColors.mintPressed
+                          : AppColors.textSecondary,
+                      size: 22,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.swap_calls_rounded,
-                    color: currentPassenger.willingToSwap
-                        ? AppColors.mintPressed
-                        : AppColors.textSecondary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Open to seat swap',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Open to seat swap',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
                         ),
-                      ),
-                      Text(
-                        currentPassenger.willingToSwap
-                            ? 'Fellow passengers can request swaps'
-                            : 'You are hidden from swap suggestions',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+                        Text(
+                          currentPassenger.willingToSwap
+                              ? 'Fellow passengers can request swaps'
+                              : 'You are hidden from swap suggestions',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Switch.adaptive(
-                  value: currentPassenger.willingToSwap,
-                  activeColor: AppColors.mintPressed,
-                  onChanged: _isTogglingSwap
-                      ? null
-                      : (val) async {
-                          setState(() => _isTogglingSwap = true);
-                          try {
-                            await ref
-                                .read(passengerRepoProvider)
-                                .updateWillingToSwap(currentPassenger.id, val);
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Could not update: $e')),
-                            );
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isTogglingSwap = false);
+                  Switch.adaptive(
+                    value: currentPassenger.willingToSwap,
+                    activeColor: AppColors.mintPressed,
+                    onChanged: _isTogglingSwap
+                        ? null
+                        : (val) async {
+                            setState(() => _isTogglingSwap = true);
+                            try {
+                              await ref
+                                  .read(passengerRepoProvider)
+                                  .updateWillingToSwap(
+                                    currentPassenger.id,
+                                    val,
+                                  );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Could not update: $e')),
+                              );
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isTogglingSwap = false);
+                              }
                             }
-                          }
-                        },
-                ),
-              ],
+                          },
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
 
           // Primary Action Button
-          PrimaryButton(
-            label: currentPassenger.groupId != null
-                ? 'Bring group together'
-                : 'Create or join a group',
-            onPressed: () {
-              if (currentPassenger.groupId != null) {
-                context.go('/group');
-              } else {
-                context.push('/group/create');
-              }
-            },
+          WalkthroughTarget(
+            id: WalkthroughTargetId.homeCta,
+            child: PrimaryButton(
+              label: currentPassenger.groupId != null
+                  ? 'Bring group together'
+                  : 'Create or join a group',
+              onPressed: () {
+                if (currentPassenger.groupId != null) {
+                  context.go('/group');
+                } else {
+                  context.push('/group/create');
+                }
+              },
+            ),
           ),
           const SizedBox(height: 20),
 

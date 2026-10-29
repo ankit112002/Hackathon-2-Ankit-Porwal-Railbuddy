@@ -6,6 +6,7 @@ import '../../core/widgets/error_state.dart';
 import '../../core/widgets/loading_skeleton.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/seat_chip.dart';
+import '../../core/widgets/station_backdrop.dart';
 import '../../logic/seat_utils.dart';
 import '../../models/passenger.dart';
 import '../../providers/providers.dart';
@@ -27,34 +28,70 @@ class _SelectPassengerScreenState extends ConsumerState<SelectPassengerScreen> {
     _selectedPassengerId = ref.read(currentPassengerIdProvider);
   }
 
+  static const _tabs = {'/home', '/group', '/requests', '/profile'};
+
+  String? _returnTab() {
+    final from = GoRouterState.of(context).uri.queryParameters['from'];
+    if (from != null && _tabs.contains(from)) return from;
+    return null;
+  }
+
+  String _fallbackLocation() {
+    final tab = _returnTab();
+    if (tab != null) return tab;
+    final passengerId = ref.read(sessionStoreProvider).getPassengerId();
+    if (passengerId != null && passengerId.isNotEmpty) return '/home';
+    return '/onboarding';
+  }
+
   Future<void> _continueAs(Passenger passenger) async {
     final sessionStore = ref.read(sessionStoreProvider);
     await sessionStore.setPassengerId(passenger.id);
     ref.read(currentPassengerIdProvider.notifier).state = passenger.id;
     if (!mounted) return;
+    final tab = _returnTab();
+    if (tab != null) {
+      if (GoRouter.of(context).canPop()) {
+        context.pop();
+        return;
+      }
+      context.go(tab);
+      return;
+    }
     context.go('/home');
+  }
+
+  void _leave() {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+    context.go(_fallbackLocation());
   }
 
   @override
   Widget build(BuildContext context) {
     final passengersAsync = ref.watch(tripPassengersProvider);
+    final canPop = GoRouter.of(context).canPop();
 
-    return Scaffold(
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go(_fallbackLocation());
+      },
+      child: Scaffold(
       backgroundColor: AppColors.cream,
-      appBar: AppBar(
-        backgroundColor: AppColors.ink,
-        elevation: 0,
-        title: const Text(
-          'Select Demo Passenger',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.white,
+      body: Column(
+        children: [
+          _StationHeader(
+            title: 'Who is travelling?',
+            subtitle: 'Pick a profile and bring your group together.',
+            onBack: _leave,
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: passengersAsync.when(
+          Expanded(
+            child: passengersAsync.when(
         data: (passengers) {
           if (passengers.isEmpty) {
             return const Center(
@@ -179,6 +216,10 @@ class _SelectPassengerScreenState extends ConsumerState<SelectPassengerScreen> {
             ref.invalidate(tripPassengersProvider);
           },
         ),
+            ),
+          ),
+        ],
+      ),
       ),
     );
   }
@@ -302,6 +343,116 @@ class _SelectPassengerScreenState extends ConsumerState<SelectPassengerScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StationHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onBack;
+
+  const _StationHeader({
+    required this.title,
+    required this.subtitle,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 188,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            AppImages.station,
+            fit: BoxFit.cover,
+            alignment: const Alignment(0, -0.25),
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x660F1115),
+                  Color(0xE60F1115),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      Material(
+                        color: AppColors.white.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: onBack,
+                          borderRadius: BorderRadius.circular(12),
+                          child: const SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: Icon(
+                              Icons.arrow_back_rounded,
+                              color: AppColors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.train_rounded,
+                        color: AppColors.mint,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'RailBuddy',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.white,
+                      letterSpacing: -0.4,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.white.withOpacity(0.78),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

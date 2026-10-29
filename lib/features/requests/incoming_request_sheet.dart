@@ -4,12 +4,15 @@ import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/ticket_card.dart';
 import '../../models/passenger.dart';
 import '../../models/swap_request.dart';
+import 'swap_outcome_dialog.dart';
+
+enum _SheetAction { accept, decline }
 
 class IncomingRequestSheet extends StatefulWidget {
   final SwapRequest request;
   final Passenger? requester;
   final Passenger me;
-  final Future<void> Function(String reqId) onAccept;
+  final Future<String> Function(String reqId) onAccept;
   final Future<void> Function(String reqId) onReject;
 
   const IncomingRequestSheet({
@@ -26,26 +29,50 @@ class IncomingRequestSheet extends StatefulWidget {
 }
 
 class _IncomingRequestSheetState extends State<IncomingRequestSheet> {
-  bool _isProcessing = false;
+  _SheetAction? _pending;
+
+  bool get _isProcessing => _pending != null;
 
   Future<void> _handleAccept() async {
-    setState(() => _isProcessing = true);
+    if (_isProcessing) return;
+    setState(() => _pending = _SheetAction.accept);
     try {
-      await widget.onAccept(widget.request.id);
-      if (mounted) Navigator.of(context).pop();
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      final res = await widget.onAccept(widget.request.id);
+      if (!mounted) return;
+      final result = switch (res) {
+        'invalid' => SwapSheetResult.seatChanged,
+        'accepted' => SwapSheetResult.accepted,
+        _ => SwapSheetResult.unavailable,
+      };
+      Navigator.of(context).pop(result);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _pending = null);
+      _showActionError('Could not accept this request. Please try again.');
     }
   }
 
   Future<void> _handleReject() async {
-    setState(() => _isProcessing = true);
+    if (_isProcessing) return;
+    setState(() => _pending = _SheetAction.decline);
     try {
       await widget.onReject(widget.request.id);
-      if (mounted) Navigator.of(context).pop();
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      if (!mounted) return;
+      Navigator.of(context).pop(SwapSheetResult.declined);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _pending = null);
+      _showActionError('Could not decline this request. Please try again.');
     }
+  }
+
+  void _showActionError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.rejected,
+      ),
+    );
   }
 
   @override
@@ -225,31 +252,47 @@ class _IncomingRequestSheetState extends State<IncomingRequestSheet> {
             Row(
               children: [
                 Expanded(
+                  flex: 2,
                   child: OutlinedButton(
                     onPressed: _isProcessing ? null : _handleReject,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.rejected,
                       side: const BorderSide(color: AppColors.rejected),
                       minimumSize: const Size.fromHeight(52),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
-                      'Decline',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    child: _pending == _SheetAction.decline
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: AppColors.rejected,
+                            ),
+                          )
+                        : const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Decline',
+                              maxLines: 1,
+                              softWrap: false,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: PrimaryButton(
                     label: 'Accept Swap',
-                    isLoading: _isProcessing,
+                    isLoading: _pending == _SheetAction.accept,
                     showArrow: false,
                     onPressed: _handleAccept,
                   ),

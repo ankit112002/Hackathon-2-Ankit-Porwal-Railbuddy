@@ -7,6 +7,12 @@ class DarkHeaderScaffold extends StatelessWidget {
   final Widget? bottomBar;
   final PreferredSizeWidget? appBar;
   final bool scrollable;
+  final String? headerImageAsset;
+  final Alignment headerImageAlignment;
+
+  /// When true, the photo fades out toward the left so titles stay clear
+  /// and the artwork reads on the right, like the home greeting.
+  final bool fadeHeaderImageRight;
 
   const DarkHeaderScaffold({
     super.key,
@@ -15,6 +21,9 @@ class DarkHeaderScaffold extends StatelessWidget {
     this.bottomBar,
     this.appBar,
     this.scrollable = true,
+    this.headerImageAsset,
+    this.headerImageAlignment = Alignment.centerRight,
+    this.fadeHeaderImageRight = false,
   });
 
   @override
@@ -27,7 +36,53 @@ class DarkHeaderScaffold extends StatelessWidget {
         child: Column(
           children: [
             // Dark Header Section
-            header,
+            SizedBox(
+              width: double.infinity,
+              child: Stack(
+              children: [
+                if (headerImageAsset != null)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            headerImageAsset!,
+                            fit: BoxFit.cover,
+                            alignment: headerImageAlignment,
+                          ),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: fadeHeaderImageRight
+                                  ? const LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        Color(0xFF0F1115),
+                                        Color(0xF20F1115),
+                                        Color(0x8C0F1115),
+                                        Color(0x330F1115),
+                                      ],
+                                      stops: [0.0, 0.32, 0.58, 1.0],
+                                    )
+                                  : const LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0x990F1115),
+                                        Color(0xD60F1115),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                header,
+              ],
+            ),
+            ),
 
             // Overlapping Cream Sheet
             Expanded(

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/seat_chip.dart';
 import '../../core/widgets/ticket_card.dart';
@@ -29,9 +30,17 @@ class FinalPlanScreen extends ConsumerWidget {
     final score = ref.watch(groupScoreProvider);
 
     if (myGroup.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Final Seating Plan')),
-        body: const Center(child: Text('No group members found')),
+      return _planShell(
+        context,
+        destination: '/home',
+        body: EmptyState(
+          icon: Icons.groups_rounded,
+          title: 'No group members found',
+          description:
+              'This seating plan is for passengers in a group. Go back home to continue.',
+          buttonLabel: 'Back to Home',
+          onButtonPressed: () => context.go('/home'),
+        ),
       );
     }
 
@@ -60,22 +69,20 @@ ${sortedMembers.map((m) => '• ${m.name}: Coach ${m.coach}, Seat ${m.seatNo} ($
 Note: Swaps are voluntary and subject to railway rules.
 ''';
 
-    return Scaffold(
-      backgroundColor: AppColors.cream,
-      appBar: AppBar(
-        backgroundColor: AppColors.cream,
-        elevation: 0,
-        title: const Text(
-          'Final Seating Plan',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.ink,
+    return _planShell(
+      context,
+      destination: '/group',
+      bottomSheet: Container(
+        color: AppColors.cream,
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SafeArea(
+          top: false,
+          child: PrimaryButton(
+            label: 'Show to TTE / Share Plan',
+            icon: Icons.share_rounded,
+            showArrow: false,
+            onPressed: () => _sharePlan(context, summaryText),
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.ink),
-          onPressed: () => context.go('/group'),
         ),
       ),
       body: SingleChildScrollView(
@@ -320,19 +327,46 @@ Note: Swaps are voluntary and subject to railway rules.
           ],
         ),
       ),
-      bottomSheet: Container(
-        color: AppColors.cream,
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: SafeArea(
-          top: false,
-          child: PrimaryButton(
-            label: 'Show to TTE / Share Plan',
-            icon: Icons.share_rounded,
-            showArrow: false,
-            onPressed: () => _sharePlan(context, summaryText),
+    );
+  }
+}
+
+/// Keeps the system back button inside the app. Replacing the stack with
+/// this route used to pop the last page and exit.
+Widget _planShell(
+  BuildContext context, {
+  required String destination,
+  required Widget body,
+  Widget? bottomSheet,
+}) {
+  void leave() => context.go(destination);
+
+  return PopScope(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) leave();
+    },
+    child: Scaffold(
+      backgroundColor: AppColors.cream,
+      appBar: AppBar(
+        backgroundColor: AppColors.cream,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.ink),
+          onPressed: leave,
+        ),
+        title: const Text(
+          'Final Seating Plan',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.ink,
           ),
         ),
       ),
-    );
-  }
+      body: body,
+      bottomSheet: bottomSheet,
+    ),
+  );
 }

@@ -14,8 +14,9 @@ class CreateGroupScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
-  final TextEditingController _nameController =
-      TextEditingController(text: 'My Family');
+  final TextEditingController _nameController = TextEditingController(
+    text: 'My Family',
+  );
   final Set<String> _selectedMemberIds = {};
   bool _isCreating = false;
   String? _searchQuery;
@@ -49,10 +50,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
     setState(() => _isCreating = true);
     try {
-      final group = await ref.read(groupRepoProvider).createGroup(
-            tripId: trip.id,
-            name: _nameController.text.trim(),
-          );
+      final group = await ref
+          .read(groupRepoProvider)
+          .createGroup(tripId: trip.id, name: _nameController.text.trim());
 
       // Assign all selected members to this group
       for (final pId in _selectedMemberIds) {
@@ -62,7 +62,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Group "${group.name}" created! Code: ${group.joinCode}'),
+          content: Text(
+            'Group "${group.name}" created! Code: ${group.joinCode}',
+          ),
           backgroundColor: AppColors.accepted,
         ),
       );
@@ -184,61 +186,70 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       width: isSelected ? 1.5 : 1,
                     ),
                   ),
-                  child: CheckboxListTile(
-                    value: isSelected,
-                    activeColor: AppColors.ink,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                    onChanged: isMe
-                        ? null // You are always in your group
-                        : (val) {
-                            setState(() {
-                              if (val == true) {
-                                _selectedMemberIds.add(p.id);
-                              } else {
-                                _selectedMemberIds.remove(p.id);
-                              }
-                            });
-                          },
-                    title: Row(
-                      children: [
-                        Text(
-                          p.name,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                        if (isMe) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.mint.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(6),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: CheckboxListTile(
+                      value: isSelected,
+                      activeColor: AppColors.ink,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      onChanged: isMe
+                          ? null // You are always in your group
+                          : (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedMemberIds.add(p.id);
+                                } else {
+                                  _selectedMemberIds.remove(p.id);
+                                }
+                              });
+                            },
+                      title: Row(
+                        children: [
+                          Text(
+                            p.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink,
                             ),
-                            child: const Text(
-                              'You',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.ink,
+                          ),
+                          if (isMe) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.mint.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'You',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.ink,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    subtitle: Text(
-                      'Coach ${p.coach} · Seat ${p.seatNo}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
                       ),
+                      subtitle: Text(
+                        'Coach ${p.coach} · Seat ${p.seatNo}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      secondary: SeatChip(coach: p.coach, seatNo: p.seatNo),
                     ),
-                    secondary: SeatChip(coach: p.coach, seatNo: p.seatNo),
                   ),
                 ),
               );

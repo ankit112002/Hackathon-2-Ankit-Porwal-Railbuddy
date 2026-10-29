@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/station_backdrop.dart';
 import '../../providers/providers.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -37,63 +38,76 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.ink,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: AppColors.mint,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.mint.withOpacity(0.3),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  )
-                ],
-              ),
-              child: const Icon(
-                Icons.train_rounded,
-                size: 48,
-                color: AppColors.ink,
-              ),
+      body: StationBackdrop(
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              children: [
+                Spacer(flex: 3),
+                _SplashMark(),
+                Spacer(flex: 4),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppColors.mint,
+                  ),
+                ),
+                SizedBox(height: 36),
+              ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'RailBuddy',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: AppColors.white,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sit Together, Travel Better',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: AppColors.white.withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(height: 48),
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: AppColors.mint,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _SplashMark extends StatelessWidget {
+  const _SplashMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: AppColors.white.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.white.withOpacity(0.22)),
+          ),
+          child: const Icon(
+            Icons.train_rounded,
+            size: 38,
+            color: AppColors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'RailBuddy',
+          style: TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+            color: AppColors.white,
+            letterSpacing: -0.6,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Sit together, swap with consent',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: AppColors.white.withOpacity(0.78),
+          ),
+        ),
+      ],
     );
   }
 }

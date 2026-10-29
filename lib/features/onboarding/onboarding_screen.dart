@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/station_backdrop.dart';
 import '../../providers/providers.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -18,9 +19,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   final List<({String title, String subtitle, IconData icon, String tag})> _slides = [
     (
-      title: 'Scattered seats?\nSit together.',
+      title: 'Sit Together,\nSwap Effortlessly',
       subtitle:
-          'RailBuddy connects you with fellow passengers to voluntary swap berths and bring groups together.',
+          'Swap seats with consent and bring your group together on the journey.',
       icon: Icons.groups_rounded,
       tag: 'GROUP SEATING'
     ),
@@ -44,7 +45,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final sessionStore = ref.read(sessionStoreProvider);
     await sessionStore.setOnboardingSeen(true);
     if (!mounted) return;
-    context.go('/select-passenger');
+    context.push('/select-passenger?from=/onboarding');
   }
 
   @override
@@ -57,28 +58,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.ink,
-      body: SafeArea(
+      body: StationBackdrop(
+        child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             children: [
-              // Top Bar with Skip
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _completeOnboarding,
-                  child: const Text(
-                    'Skip',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.mint,
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withOpacity(0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.train_rounded,
+                      size: 18,
+                      color: AppColors.white,
                     ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'RailBuddy',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _completeOnboarding,
+                    child: const Text(
+                      'Skip',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mint,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
-              // Page View
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -89,38 +113,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   itemBuilder: (context, index) {
                     final slide = _slides[index];
                     return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              color: AppColors.inkSoft,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.mint.withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                slide.icon,
-                                size: 64,
-                                color: AppColors.mint,
-                              ),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.white.withOpacity(0.18),
                             ),
                           ),
+                          child: Icon(
+                            slide.icon,
+                            size: 24,
+                            color: AppColors.mint,
+                          ),
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 18),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.mint.withOpacity(0.15),
+                            color: AppColors.mint.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(100),
                           ),
                           child: Text(
@@ -133,25 +152,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         Text(
                           slide.title,
                           style: const TextStyle(
-                            fontSize: 32,
+                            fontSize: 34,
                             fontWeight: FontWeight.w900,
                             color: AppColors.white,
-                            height: 1.15,
-                            letterSpacing: -0.5,
+                            height: 1.08,
+                            letterSpacing: -0.8,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         Text(
                           slide.subtitle,
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.normal,
-                            color: AppColors.white.withOpacity(0.7),
-                            height: 1.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.white.withOpacity(0.78),
+                            height: 1.45,
                           ),
                         ),
                       ],
@@ -200,6 +219,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const SizedBox(height: 8),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SessionStore {
   static const _keyPassengerId = 'selected_passenger_id';
   static const _keyOnboardingSeen = 'onboarding_seen';
+  static const _keyWalkthroughCompleted = 'walkthrough_completed';
+  static const _keyWalkthroughVoiceMuted = 'walkthrough_voice_muted';
 
   final SharedPreferences _prefs;
 
@@ -31,5 +33,21 @@ class SessionStore {
 
   Future<void> setOnboardingSeen(bool seen) async {
     await _prefs.setBool(_keyOnboardingSeen, seen);
+  }
+
+  bool isWalkthroughCompleted() {
+    return _prefs.getBool(_keyWalkthroughCompleted) ?? false;
+  }
+
+  Future<void> setWalkthroughCompleted(bool completed) async {
+    await _prefs.setBool(_keyWalkthroughCompleted, completed);
+  }
+
+  bool isWalkthroughVoiceMuted() {
+    return _prefs.getBool(_keyWalkthroughVoiceMuted) ?? false;
+  }
+
+  Future<void> setWalkthroughVoiceMuted(bool muted) async {
+    await _prefs.setBool(_keyWalkthroughVoiceMuted, muted);
   }
 }

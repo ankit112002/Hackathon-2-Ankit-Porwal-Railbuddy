@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/dark_header_scaffold.dart';
+import '../../core/widgets/station_backdrop.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/score_ring.dart';
@@ -11,6 +12,8 @@ import '../../core/widgets/stepper_bar.dart';
 import '../../logic/score.dart';
 import '../../models/swap_request.dart';
 import '../../providers/providers.dart';
+import '../walkthrough/walkthrough_keys.dart';
+import '../walkthrough/walkthrough_target.dart';
 
 class GroupDashboardScreen extends ConsumerWidget {
   const GroupDashboardScreen({super.key});
@@ -21,8 +24,9 @@ class GroupDashboardScreen extends ConsumerWidget {
   }) {
     if (score == 100) return 3; // Seated
     if (activePlanRequests.isNotEmpty) {
-      if (activePlanRequests
-          .every((r) => r.status == SwapRequestStatus.accepted)) {
+      if (activePlanRequests.every(
+        (r) => r.status == SwapRequestStatus.accepted,
+      )) {
         return 3; // Seated
       }
       return 2; // Requests
@@ -54,13 +58,16 @@ class GroupDashboardScreen extends ConsumerWidget {
             ),
           ),
         ),
-        body: EmptyState(
-          icon: Icons.group_add_rounded,
-          title: 'Not in a Group Yet',
-          description:
-              'Create a group for your travel companions or join with an existing code to bring your seats together.',
-          buttonLabel: 'Create Group',
-          onButtonPressed: () => context.push('/group/create'),
+        body: WalkthroughTarget(
+          id: WalkthroughTargetId.groupFocus,
+          child: EmptyState(
+            icon: Icons.group_add_rounded,
+            title: 'Not in a Group Yet',
+            description:
+                'Create a group for your travel companions or join with an existing code to bring your seats together.',
+            buttonLabel: 'Create Group',
+            onButtonPressed: () => context.push('/group/create'),
+          ),
         ),
       );
     }
@@ -73,76 +80,86 @@ class GroupDashboardScreen extends ConsumerWidget {
     );
 
     return DarkHeaderScaffold(
-      header: Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'GROUP SEATING SCORE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.mint,
-                        letterSpacing: 1.0,
+      headerImageAsset: AppImages.station,
+      headerImageAlignment: const Alignment(0, -0.15),
+      header: WalkthroughTarget(
+        id: WalkthroughTargetId.groupFocus,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'GROUP SEATING SCORE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.mint,
+                          letterSpacing: 1.0,
+                        ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${myGroup.length} Group Members',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ScoreRing(score: score),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Spread & Best Possible Subtext Card
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.inkSoft,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.white.withOpacity(0.08)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      score == 100
+                          ? Icons.celebration_rounded
+                          : Icons.warning_amber_rounded,
+                      color: score == 100
+                          ? AppColors.mint
+                          : const Color(0xFFF5A524),
+                      size: 18,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${myGroup.length} Group Members',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.white,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        score == 100
+                            ? 'Perfect! All members are seated together in the same bay.'
+                            : 'Scattered across $spread coaches · ${plan != null ? "Best possible: ${plan.targetScore}/100 with ${plan.swaps.length} swaps" : "Analyzing swaps..."}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white.withOpacity(0.9),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                ScoreRing(score: score),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Spread & Best Possible Subtext Card
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.inkSoft,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.white.withOpacity(0.08)),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    score == 100
-                        ? Icons.celebration_rounded
-                        : Icons.warning_amber_rounded,
-                    color: score == 100 ? AppColors.mint : const Color(0xFFF5A524),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      score == 100
-                          ? 'Perfect! All members are seated together in the same bay.'
-                          : 'Scattered across $spread coaches · ${plan != null ? "Best possible: ${plan.targetScore}/100 with ${plan.swaps.length} swaps" : "Analyzing swaps..."}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       body: Column(
@@ -162,19 +179,28 @@ class GroupDashboardScreen extends ConsumerWidget {
 
           // Member List Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Group Members & Locations',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
+              const Expanded(
+                child: Text(
+                  'Group Members & Locations',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
                 ),
               ),
               TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 onPressed: () => context.push('/seat-map'),
                 child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Seat Map',
@@ -211,7 +237,8 @@ class GroupDashboardScreen extends ConsumerWidget {
                 break;
               case MemberBayStatus.sameCoach:
                 dotColor = const Color(0xFFF5A524);
-                statusText = 'Same Coach (${p.coach}), Bay ${(p.seatNo - 1) ~/ 8 + 1}';
+                statusText =
+                    'Same Coach (${p.coach}), Bay ${(p.seatNo - 1) ~/ 8 + 1}';
                 break;
               case MemberBayStatus.otherCoach:
                 dotColor = AppColors.rejected;
@@ -222,8 +249,10 @@ class GroupDashboardScreen extends ConsumerWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.white,
                   borderRadius: BorderRadius.circular(18),

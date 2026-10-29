@@ -13,12 +13,16 @@ import '../features/optimizer/optimizer_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/requests/incoming_request_sheet.dart';
 import '../features/requests/requests_screen.dart';
+import '../features/requests/swap_outcome_dialog.dart';
 import '../features/seat_map/seat_map_screen.dart';
 import '../features/select_passenger/select_passenger_screen.dart';
 import '../features/swap/swap_detail_screen.dart';
 import '../features/swap/swap_matches_screen.dart';
 import '../features/swap/swap_preferences_screen.dart';
 import '../features/trip_details/trip_details_screen.dart';
+import '../features/walkthrough/walkthrough_keys.dart';
+import '../features/walkthrough/walkthrough_overlay.dart';
+import '../features/walkthrough/walkthrough_target.dart';
 import '../models/swap_request.dart';
 import '../providers/providers.dart';
 import 'theme/colors.dart';
@@ -38,9 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.uri.path;
 
       // Allow splash, onboarding, gallery, and select-passenger freely
-      if (loc == '/splash' ||
-          loc == '/onboarding' ||
-          loc == '/gallery') {
+      if (loc == '/splash' || loc == '/onboarding' || loc == '/gallery') {
         return null;
       }
 
@@ -71,6 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Select Passenger
       GoRoute(
         path: '/select-passenger',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SelectPassengerScreen(),
       ),
 
@@ -191,12 +194,49 @@ class AppTabShell extends ConsumerStatefulWidget {
 
 class _AppTabShellState extends ConsumerState<AppTabShell> {
   final Set<String> _seenIncomingReqIds = {};
+  final Map<String, Set<String>> _seenPendingOutgoingIds = {};
   bool _isShowingSheet = false;
+  bool _outcomeDialogOpen = false;
+  bool _askedToStartTour = false;
+  GoRouterDelegate? _routerDelegate;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final delegate = GoRouter.of(context).routerDelegate;
+    if (!identical(_routerDelegate, delegate)) {
+      _routerDelegate?.removeListener(_handleRouteChange);
+      _routerDelegate = delegate;
+      _routerDelegate!.addListener(_handleRouteChange);
+    }
+  }
+
+  void _handleRouteChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _routerDelegate?.removeListener(_handleRouteChange);
+    super.dispose();
+  }
+
+  void _queueTourStart() {
+    if (_askedToStartTour) return;
+    if (ref.read(currentPassengerProvider) == null) return;
+    _askedToStartTour = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(walkthroughControllerProvider.notifier).startIfNeeded();
+    });
+  }
 
   void _checkIncomingRequests(List<SwapRequest> incoming) {
     if (_isShowingSheet) return;
-    final pending =
-        incoming.where((r) => r.status == SwapRequestStatus.pending);
+    if (ref.read(walkthroughControllerProvider).active) return;
+    final pending = incoming.where(
+      (r) => r.status == SwapRequestStatus.pending,
+    );
     for (final req in pending) {
       if (_seenIncomingReqIds.contains(req.id)) continue;
       _seenIncomingReqIds.add(req.id);
@@ -212,13 +252,13 @@ class _AppTabShellState extends ConsumerState<AppTabShell> {
       _isShowingSheet = false;
       return;
     }
-    final allPassengers =
-        ref.read(tripPassengersProvider).valueOrNull ?? [];
-    final requester =
-        allPassengers.where((p) => p.id == request.requesterId).firstOrNull;
+    final allPassengers = ref.read(tripPassengersProvider).valueOrNull ?? [];
+    final requester = allPassengers
+        .where((p) => p.id == request.requesterId)
+        .firstOrNull;
 
     _isShowingSheet = true;
-    showModalBottomSheet(
+    showModalBottomSheet<SwapSheetResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -226,60 +266,145 @@ class _AppTabShellState extends ConsumerState<AppTabShell> {
         request: request,
         requester: requester,
         me: me,
-        onAccept: (reqId) async {
-          final res = await ref.read(requestRepoProvider).accept(reqId);
-          if (ctx.mounted) {
-            if (res == 'invalid') {
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Seat changed, please find again.'),
-                  backgroundColor: AppColors.rejected,
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Swap accepted! Your seat has been updated.'),
-                  backgroundColor: AppColors.accepted,
-                ),
-              );
-            }
-          }
-        },
-        onReject: (reqId) async {
-          await ref.read(requestRepoProvider).reject(reqId);
-          if (ctx.mounted) {
-            ScaffoldMessenger.of(ctx).showSnackBar(
-              const SnackBar(
-                content: Text('Swap declined.'),
-                backgroundColor: AppColors.textSecondary,
-              ),
-            );
-          }
-        },
+        onAccept: (reqId) => ref.read(requestRepoProvider).accept(reqId),
+        onReject: (reqId) => ref.read(requestRepoProvider).reject(reqId),
       ),
-    ).whenComplete(() {
+    ).then((result) async {
       _isShowingSheet = false;
+      if (!mounted) return;
+      if (result != null) {
+        await _showVolunteerOutcome(
+          result: result,
+          request: request,
+          requesterName: requester?.name ?? 'The passenger',
+        );
+      }
+      if (!mounted) return;
       final incoming = ref.read(incomingRequestsProvider).valueOrNull ?? [];
       _checkIncomingRequests(incoming);
+      final outgoing = ref.read(outgoingRequestsProvider).valueOrNull;
+      if (outgoing != null) _onOutgoingUpdate(outgoing);
     });
+  }
+
+  Future<void> _showVolunteerOutcome({
+    required SwapSheetResult result,
+    required SwapRequest request,
+    required String requesterName,
+  }) async {
+    if (!mounted || _outcomeDialogOpen) return;
+    _outcomeDialogOpen = true;
+    try {
+      await showVolunteerSwapOutcomeDialog(
+        context,
+        result: result,
+        request: request,
+        requesterName: requesterName,
+      );
+    } finally {
+      _outcomeDialogOpen = false;
+    }
+  }
+
+  void _onOutgoingUpdate(List<SwapRequest> outgoing) {
+    final me = ref.read(currentPassengerProvider);
+    if (me == null) return;
+
+    final pendingIds = {
+      for (final request in outgoing)
+        if (request.status == SwapRequestStatus.pending) request.id,
+    };
+    final previous = _seenPendingOutgoingIds[me.id];
+    if (previous == null) {
+      _seenPendingOutgoingIds[me.id] = pendingIds;
+      return;
+    }
+
+    final newlyDeclined = outgoing.where((request) {
+      final closed = request.status == SwapRequestStatus.rejected ||
+          request.status == SwapRequestStatus.invalid;
+      return closed && previous.contains(request.id);
+    }).toList();
+    if (newlyDeclined.isEmpty) {
+      _seenPendingOutgoingIds[me.id] = pendingIds;
+      return;
+    }
+    if (_outcomeDialogOpen ||
+        _isShowingSheet ||
+        !mounted ||
+        ref.read(walkthroughControllerProvider).active) {
+      return;
+    }
+
+    _seenPendingOutgoingIds[me.id] = pendingIds;
+    _presentOutgoingDeclines(newlyDeclined);
+  }
+
+  Future<void> _presentOutgoingDeclines(List<SwapRequest> requests) async {
+    if (!mounted || _outcomeDialogOpen) return;
+    _outcomeDialogOpen = true;
+    try {
+      final passengers = ref.read(tripPassengersProvider).valueOrNull ?? [];
+      await showRequesterDeclinedDialog(
+        context,
+        requests: requests,
+        passengers: passengers,
+        onViewRejected: () {
+          ref.read(requestsTabIndexProvider.notifier).state = 3;
+          widget.navigationShell.goBranch(2);
+        },
+      );
+    } finally {
+      _outcomeDialogOpen = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     // Listen to realtime incoming requests
-    ref.listen<AsyncValue<List<SwapRequest>>>(
-      incomingRequestsProvider,
-      (prev, next) {
-        next.whenData((incoming) => _checkIncomingRequests(incoming));
-      },
-    );
+    ref.listen<AsyncValue<List<SwapRequest>>>(incomingRequestsProvider, (
+      prev,
+      next,
+    ) {
+      next.whenData((incoming) => _checkIncomingRequests(incoming));
+    });
+    final outgoingNow = ref.read(outgoingRequestsProvider).valueOrNull;
+    final me = ref.read(currentPassengerProvider);
+    if (outgoingNow != null &&
+        me != null &&
+        !_seenPendingOutgoingIds.containsKey(me.id)) {
+      _seenPendingOutgoingIds[me.id] = {
+        for (final request in outgoingNow)
+          if (request.status == SwapRequestStatus.pending) request.id,
+      };
+    }
+    ref.listen<AsyncValue<List<SwapRequest>>>(outgoingRequestsProvider, (
+      prev,
+      next,
+    ) {
+      next.whenData(_onOutgoingUpdate);
+    });
+    ref.listen(walkthroughControllerProvider, (prev, next) {
+      final wasActive = prev?.active ?? false;
+      if (wasActive && !next.active) {
+        final pending = ref.read(incomingRequestsProvider).valueOrNull ?? [];
+        _checkIncomingRequests(pending);
+        final outgoing = ref.read(outgoingRequestsProvider).valueOrNull;
+        if (outgoing != null) _onOutgoingUpdate(outgoing);
+      }
+    });
 
+    _queueTourStart();
+
+    final tour = ref.watch(walkthroughControllerProvider);
+    final shellIsCurrent = ModalRoute.of(context)?.isCurrent ?? true;
     final incoming = ref.watch(incomingRequestsProvider).valueOrNull ?? [];
-    final hasUnseenPending = incoming.any((r) =>
-        r.status == SwapRequestStatus.pending &&
-        !_seenIncomingReqIds.contains(r.id));
-    if (hasUnseenPending) {
+    final hasUnseenPending = incoming.any(
+      (r) =>
+          r.status == SwapRequestStatus.pending &&
+          !_seenIncomingReqIds.contains(r.id),
+    );
+    if (hasUnseenPending && !tour.active) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _checkIncomingRequests(incoming);
@@ -288,53 +413,72 @@ class _AppTabShellState extends ConsumerState<AppTabShell> {
     final pendingIncomingCount = incoming
         .where((r) => r.status == SwapRequestStatus.pending)
         .length;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
-      body: widget.navigationShell,
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        color: Colors.transparent,
-        child: Container(
-          height: 68,
-          decoration: BoxDecoration(
-            color: AppColors.ink,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.ink.withOpacity(0.25),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Column(
             children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.home_rounded,
-                label: 'Home',
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.groups_rounded,
-                label: 'My Group',
-              ),
-              _buildNavItem(
-                index: 2,
-                icon: Icons.swap_horiz_rounded,
-                label: 'Requests',
-                badgeCount: pendingIncomingCount,
-              ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.person_rounded,
-                label: 'Profile',
+              Expanded(child: widget.navigationShell),
+              WalkthroughTarget(
+                id: WalkthroughTargetId.bottomNav,
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
+                  color: Colors.transparent,
+                  child: Container(
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: AppColors.ink,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.ink.withOpacity(0.25),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNavItem(
+                          index: 0,
+                          icon: Icons.home_rounded,
+                          label: 'Home',
+                        ),
+                        _buildNavItem(
+                          index: 1,
+                          icon: Icons.groups_rounded,
+                          label: 'My Group',
+                        ),
+                        _buildNavItem(
+                          index: 2,
+                          icon: Icons.swap_horiz_rounded,
+                          label: 'Requests',
+                          badgeCount: pendingIncomingCount,
+                        ),
+                        _buildNavItem(
+                          index: 3,
+                          icon: Icons.person_rounded,
+                          label: 'Profile',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-        ),
+          if (tour.active && shellIsCurrent)
+            Positioned.fill(
+              child: WalkthroughOverlay(
+                navigationShell: widget.navigationShell,
+              ),
+            ),
+        ],
       ),
     );
   }
